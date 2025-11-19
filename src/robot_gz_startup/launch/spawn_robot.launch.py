@@ -1,154 +1,154 @@
-# in this launch script we launch the Gazebo program
-# together with the packages that are required to let ROS and Gazebo
-# communicate with each other. These packages are already provided by the "ros_gz" package:
-# - ros_gz_bridge   (enables translation between ROS and Gazebo Topics)
-# - ros_gz_sim      (provides a launch script that can take in arguments to launch Gazebo)
-# - ros_gz_image    (provides a type of bridge for image transport effeciency between Gazebo and ROS)
-# additionally the script takes in a few arguments (from the CLI or a other launch file/script)
-# - robot_name      (name of that robot will have in Gazebo sim)
-# - world_name      (sdf file that contains the world description)
-# - gz_server_only  (boolean for the running only the server or both the GUI and server)
-# finally we must add a environment variables or add to it the location of our robot's meshes
-# in order for Gazebo to be able to launch our mehses
-# - GZ_SIM_RESOURCE_PATH    (name of the env variable for additional files such as meshes)
-# - GZ_SIM_PLUGIN_PATH      (name of the env variable where plugins are located for the sensors)
+# 이 런치 스크립트에서는 Gazebo 프로그램과 함께
+# ROS와 Gazebo가 서로 통신할 수 있게 해주는 필수 패키지들을 실행합니다.
+# 이 패키지들은 "ros_gz" 패키지에서 이미 제공하고 있습니다:
+# - ros_gz_bridge   (ROS와 Gazebo 토픽 간의 변환을 활성화)
+# - ros_gz_sim      (Gazebo를 실행하기 위한 인자를 받을 수 있는 런치 스크립트 제공)
+# - ros_gz_image    (Gazebo와 ROS 간의 효율적인 이미지 전송을 위한 브리지 유형 제공)
+# 추가로 이 스크립트는 몇 가지 인자를 입력받습니다 (CLI 또는 다른 런치 파일/스크립트로부터):
+# - robot_name      (Gazebo 시뮬레이션 내에서 로봇이 가질 이름)
+# - world_name      (월드 묘사가 담긴 sdf 파일)
+# - gz_server_only  (서버만 실행할지, GUI와 서버를 모두 실행할지 결정하는 불리언 값)
+# 마지막으로 환경 변수를 추가하거나 로봇의 메시(mesh) 위치를 추가해야 합니다.
+# 그래야 Gazebo가 우리 로봇의 메시를 불러올 수 있습니다.
+# - GZ_SIM_RESOURCE_PATH    (메시와 같은 추가 파일들을 위한 환경 변수 이름)
+# - GZ_SIM_PLUGIN_PATH      (센서 플러그인들이 위치한 환경 변수 이름)
 import os
 from launch import LaunchDescription, LaunchContext
 from launch_ros.actions import Node
 from ament_index_python import get_package_share_directory
 
-# alternative substitution type for:
+# 다음을 대체하는 치환 유형:
 # "from ament_index_python import get_package_share_directory"
 from launch_ros.substitutions import FindPackageShare
 
 # - DeclareLaunchArgument
-#   -> (allows to define arguments passed from the CLI or launch file/script)
+#   -> (CLI나 런치 파일/스크립트에서 전달되는 인자를 정의할 수 있게 함)
 # - IncludeLaunchDescription
-#   -> (enables us to fetch a launch file from a other package and pass arguments to it)
+#   -> (다른 패키지의 런치 파일을 가져와 인자를 전달할 수 있게 함)
 # - SetEnvironmentVariable
-#   -> (sets a new env variable)
+#   -> (새로운 환경 변수 설정)
 # - ExecuteProcess
-#   -> evaluate and execute commands on runtime
+#   -> 런타임에 명령어를 평가하고 실행
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable, LogInfo , ExecuteProcess , RegisterEventHandler, GroupAction, AppendEnvironmentVariable
 
 # - LaunchConfiguration
-#   -> (enables to store a launch argument (argument is local and scoped to this file))
+#   -> (런치 인자를 저장할 수 있게 함 (인자는 로컬이며 이 파일 범위 내에서만 유효))
 # - PythonExpression
-#   -> (allows a mix of substitutions and variables of this script to be used together)
+#   -> (치환(substitutions)과 이 스크립트의 변수들을 섞어서 사용할 수 있게 함)
 # - PathJoinSubstitution
-#   -> (same "os.path.join" except is done async)
-# - IfElseSubstitution # not in humble
-#   -> (returns 1 of 2 substitutions)
+#   -> ("os.path.join"과 같으나 비동기로 수행됨)
+# - IfElseSubstitution # humble 버전에는 없음
+#   -> (2개의 치환 중 1개를 반환)
 from launch.substitutions import LaunchConfiguration, PythonExpression, PathJoinSubstitution , TextSubstitution
 
 # - PythonLaunchDescriptionSource
-#   -> (tells ROS that the included file is Python based (others : XML or YAML))
+#   -> (ROS에게 포함된 파일이 Python 기반임을 알림 (그 외: XML 또는 YAML))
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 # - OnProcessExit
-#   -> (when running a EventHandler module (see RegisterEventHandler) you must tell it on WHICH event it has to execute what is inside the EventHandler OnProcessExit is one of these events)
+#   -> (EventHandler 모듈(RegisterEventHandler 참조)을 실행할 때, 어떤 이벤트에 대해 실행할지 알려줘야 함. OnProcessExit는 그 이벤트 중 하나)
 from launch.event_handlers import OnProcessExit
 
 # - IfCondition
-#   -> (A condition to be checked at launchtime if the result == true then the node or action is executed)
+#   -> (런치 타임에 확인되는 조건. 결과가 true이면 노드나 액션이 실행됨)
 # - UnlessCondition
-#   -> (A condition to be checked at launchtime if the result == false then the node or action is executed)
+#   -> (런치 타임에 확인되는 조건. 결과가 false이면 노드나 액션이 실행됨)
 from launch.conditions import IfCondition , UnlessCondition
 
 def generate_launch_description():
 
-    # (1) first we DEFINE the possible arguments (configurable via the CLI)
-    # this tells ROS2 that a specific argument exists and may be provided
-    # later on, to this script via the CLI or a other launch file/script
+    # (1) 먼저 가능한 인자들을 정의(DEFINE)합니다 (CLI를 통해 설정 가능).
+    # 이것은 특정 인자가 존재하며 나중에 CLI나 다른 런치 파일/스크립트를 통해
+    # 이 스크립트로 제공될 수 있음을 ROS2에 알립니다.
     robot_name = LaunchConfiguration('robot_name')
     world_name = LaunchConfiguration('world_name')
     gz_server_only = LaunchConfiguration('gz_server_only')
     robot_namespace = LaunchConfiguration('ns')
-    # this is a important argument when running a simulation in Gazebo
-    # setting this to 'true' will result in not launching certain nodes that are only 
-    # required when first booting up the Gazebo server (and GUI)
+    # 이것은 Gazebo에서 시뮬레이션을 실행할 때 중요한 인자입니다.
+    # 이 값을 'true'로 설정하면 Gazebo 서버(및 GUI)를 처음 부팅할 때만 
+    # 필요한 특정 노드들을 실행하지 않습니다.
     add_robot = LaunchConfiguration('add_robot')
-    # spawning extra robots can should also include a x,y coordinate
+    # 추가 로봇을 스폰(spawn)할 때는 x, y 좌표도 포함해야 합니다.
     robot_x_coord = LaunchConfiguration('robot_x_coord')
     robot_y_coord = LaunchConfiguration('robot_y_coord')
     robot_z_coord = LaunchConfiguration('robot_z_coord')
 
-    # (2) next we DECLARE the arguments of the launch file
-    # that can be passed (or not) by the CLI or a other launch file/script.
-    # additionally we can set a default value. If no default is set then
-    # these arguments will send a error message when this script is run without these arguments
+    # (2) 다음으로 런치 파일의 인자들을 선언(DECLARE)합니다.
+    # 이 인자들은 CLI나 다른 런치 파일/스크립트에 의해 전달될 수도 있고 아닐 수도 있습니다.
+    # 추가적으로 기본값(default value)을 설정할 수 있습니다. 기본값이 설정되지 않은 경우,
+    # 이 인자들 없이 스크립트를 실행하면 에러 메시지가 발생합니다.
     robot_name_arg = DeclareLaunchArgument(
         name='robot_name',
-        description='[ARG] name of the robot in Gazebo sim'
+        description='[인자] Gazebo 시뮬레이션 내 로봇의 이름'
     )
     robot_namespace_arg = DeclareLaunchArgument(
         name='ns',
-        description='[ARG] required namespace to keep entity (simulation), nodes and topics separate when running multiple robots in the same simulation'
+        description='[인자] 동일한 시뮬레이션에서 여러 로봇을 실행할 때 엔티티(시뮬레이션), 노드, 토픽을 분리하기 위해 필요한 네임스페이스'
     )
     world_name_arg = DeclareLaunchArgument(
         name='world_name',
-        description='[ARG] name of the sdf file stored in the /world directory that is used to create the world for Gazbo sim',
+        description='[인자] Gazebo 시뮬레이션 월드 생성을 위해 사용되는 /world 디렉토리에 저장된 sdf 파일의 이름',
         default_value='empty_world'
     )
     gz_server_only_arg = DeclareLaunchArgument(
         name='gz_server_only',
-        description='[ARG] choose whether you want to only launch the Gazebo server or both the GUI and server',
+        description='[인자] Gazebo 서버만 실행할지, 아니면 GUI와 서버를 둘 다 실행할지 선택',
         default_value='false'
     )
     add_robot_arg = DeclareLaunchArgument(
         name='add_robot',
-        description='[ARG] when already running a simulation start add this argument',
+        description='[인자] 이미 시뮬레이션이 실행 중일 때 이 인자를 추가하여 시작',
         default_value='false'
     )
     robot_x_coord_arg = DeclareLaunchArgument(
         name='robot_x_coord',
-        description='[ARG] when spawning a robot you might want to spawn it in a different location then (0,0,0) so you can add this x value',
+        description='[인자] 로봇을 스폰할 때 (0,0,0)이 아닌 다른 위치에 스폰하고 싶을 경우 이 x 값을 추가',
         default_value='0'
     )
     robot_y_coord_arg = DeclareLaunchArgument(
         name='robot_y_coord',
-        description='[ARG] when spawning a robot you might want to spawn it in a different location then (0,0,0) so you can add this y value',
+        description='[인자] 로봇을 스폰할 때 (0,0,0)이 아닌 다른 위치에 스폰하고 싶을 경우 이 y 값을 추가',
         default_value='0'
     )
     robot_z_coord_arg = DeclareLaunchArgument(
         name='robot_z_coord',
-        description='[ARG] when spawning a robot you might want to spawn it in a different location then (0,0,0) so you can add this z value',
+        description='[인자] 로봇을 스폰할 때 (0,0,0)이 아닌 다른 위치에 스폰하고 싶을 경우 이 z 값을 추가',
         default_value='0.1'
     )
-    # NOTE :
-    # "LaunchConfiguration" -> these are the REFERENCES to the command line arguments
-    # "DeclareLaunchArgument" -> these are the arguments you want to accept from the CLI or a other launch script/file
+    # 참고 :
+    # "LaunchConfiguration" -> 이것들은 커맨드 라인 인자에 대한 참조(REFERENCES)입니다.
+    # "DeclareLaunchArgument" -> 이것들은 CLI나 다른 런치 스크립트/파일로부터 받고자 하는 인자들입니다.
 
-    # CONVENTIONS ============================================================
+    # 규칙(CONVENTIONS) ============================================================
 
-    # the following paragraph is very important for naming coventions and in case we want to add
-    # new robot packages later on:
+    # 다음 단락은 명명 규칙에 있어 매우 중요하며, 나중에 새로운 로봇 패키지를 
+    # 추가하려 할 때 참고해야 합니다:
 
-    # 1) the name of the robot package is:
+    # 1) 로봇 패키지의 이름은:
     # ${ROBOTNAME}_description
 
-    # 2) the name of the robot's main xacro file is:
+    # 2) 로봇의 메인 xacro 파일 이름은:
     # ${ROBOTNAME}_main.xacro
 
-    # 3) the name of the robot's launch file starting the robot_state_publisher is :
+    # 3) robot_state_publisher를 시작하는 로봇의 런치 파일 이름은:
     # ${ROBOTNAME}_description.launch.py
 
-    # 4) the name of the robot's launch file starting the controllers is :
+    # 4) 컨트롤러를 시작하는 로봇의 런치 파일 이름은:
     # ${ROBOTNAME}_controllers.launch.py
 
-    # 5) the name of the robot's config file for the ros_gz_bridge is :
+    # 5) ros_gz_bridge를 위한 로봇 설정 파일 이름은:
     # gz_bridge.yaml
 
-    # 6) the name of the world inside this package is ".sdf" file
+    # 6) 이 패키지 내의 월드 파일은 ".sdf" 파일입니다.
 
-    # CONVENTIONS ============================================================
+    # 규칙(CONVENTIONS) ============================================================
 
-    # (3) we check if the passed files and package names exist in the filesystem
+    # (3) 전달된 파일과 패키지 이름이 파일 시스템에 존재하는지 확인합니다.
     world_pkg_path = get_package_share_directory("robot_gz_startup")
 
     robot_pkg_path = FindPackageShare(
-        # because the final result between "robot_name" and the extension is a string
-        # we put it bewteen single quotes to make it 1 single string
+        # "robot_name"과 확장자의 최종 결과가 문자열이므로,
+        # 이를 하나의 단일 문자열로 만들기 위해 작은따옴표 사이에 넣습니다.
         PythonExpression(["'", robot_name, "_description", "'"])
     )
 
@@ -186,41 +186,41 @@ def generate_launch_description():
         ])
     ])
 
-    # IMPROVEMENTS ============================================================
+    # 개선 사항(IMPROVEMENTS) ============================================================
 
-    # NOTE: dont know how to do async conditional checking
-    # I know i have to either use the "IfCondition" module or "IfElseSubstitution" module or perhaps a "opaque" function
-    # we can also use "PythonExpression" module but this is less recommended especially if "IfElseSubstitution" is available
-    # to create async conditions but i am not sure
+    # 참고: 비동기 조건 검사를 어떻게 수행하는지 정확히 모르겠습니다.
+    # "IfCondition" 모듈이나 "IfElseSubstitution" 모듈, 혹은 "opaque" 함수를 사용해야 한다는 것은 알고 있습니다.
+    # "PythonExpression" 모듈을 사용할 수도 있지만, 비동기 조건을 생성하는 데 "IfElseSubstitution"을 
+    # 사용할 수 있다면 덜 권장되는 방식일 것입니다. 확실치는 않습니다.
 
-    # IMPROVEMENTS ============================================================
-
-
+    # 개선 사항(IMPROVEMENTS) ============================================================
 
 
-    # (4) start all nodes and programs by using the preexisting packages:
+
+
+    # (4) 기존 패키지들을 사용하여 모든 노드와 프로그램을 시작합니다:
     # - ros_gz_sim
-    # (use this package's launch files to make it easier to start Gazebo with additional arguments + spawn our robot)
+    # (이 패키지의 런치 파일을 사용하여 추가 인자와 함께 Gazebo를 더 쉽게 시작하고 로봇을 스폰)
     # - spawn_entity
-    # (a Python script provided by the ros_gz_sim package to spawn a robot in Gazebo)
+    # (Gazebo에 로봇을 스폰하기 위해 ros_gz_sim 패키지에서 제공하는 Python 스크립트)
     # - ros_gz_bridge
-    # (use this package's launch file that can also take in arguments to translate ROS topics to Gazebo topics)
+    # (이 패키지의 런치 파일을 사용하여 ROS 토픽을 Gazebo 토픽으로 변환, 인자 입력 가능)
     # - robot_state_publisher
-    # (present (normally) in the included robot package launch file (if not it should be created in the robot's package))
+    # ((보통) 포함된 로봇 패키지 런치 파일에 존재함 (만약 없다면 로봇 패키지 안에 생성해야 함))
 
     # (4.1) ros_gz_sim
-    # we need 3 things :
-    # 1) find the path to 'ros_gz_sim' launch file
-    # 2) check the user's input for the 'gz_server_only' argument to see if we launch the GUI and the server or only the server 
-    # 2.1) execute the gz_server.launch.py file 
-    # or
-    # 2.2) execute the gz_sim.launch.py file 
-    # 3) depending on the 'add_robot' we can either ignore: 
+    # 3가지가 필요합니다:
+    # 1) 'ros_gz_sim' 런치 파일의 경로 찾기
+    # 2) 사용자의 'gz_server_only' 인자 입력을 확인하여 GUI와 서버를 모두 실행할지 서버만 실행할지 결정
+    # 2.1) gz_server.launch.py 파일 실행
+    # 또는
+    # 2.2) gz_sim.launch.py 파일 실행
+    # 3) 'add_robot'에 따라 무시할지 결정:
     
     # 1)
     ros_gz_sim_pkg_path = get_package_share_directory('ros_gz_sim')
 
-    # 2) and 3) use Python conditionals to determine launch file and arguments
+    # 2) 및 3) Python 조건문을 사용하여 런치 파일과 인자 결정
     gz_server = PythonExpression([" False if ","'",gz_server_only,"'","=='false' else True "])
     
     gz_launch_file = PythonExpression([
@@ -248,7 +248,7 @@ def generate_launch_description():
         "'",world_sdf_path,"'"
     ])
 
-    # 3) Launch the description
+    # 3) 디스크립션(description) 런치
     ros_gz_launch_desc = IncludeLaunchDescription(
         launch_description_source=PythonLaunchDescriptionSource(gz_launch_file),
         launch_arguments={
@@ -259,9 +259,9 @@ def generate_launch_description():
     )
 
     # (4.2) spawn_entity
-    # we need 1 thing:
-    # 1) start a node that reads from the topic "robot_description" send out by the robot_state_publisher node
-    # and execute the create command
+    # 1가지가 필요합니다:
+    # 1) robot_state_publisher 노드에서 보낸 "robot_description" 토픽을 읽고
+    # create 명령을 실행하는 노드 시작
 
     spawn_entity_node = Node(
         package='ros_gz_sim',
@@ -269,53 +269,53 @@ def generate_launch_description():
         arguments=[
                 '-topic', PythonExpression(["'",robot_namespace,'/robot_description',"'"]),
                 '-name', robot_namespace,
-                # for some reason the jetracer and other models spawn under the ground_plane which is why we add 1 unit to the Z coord
+                # 어떤 이유에서인지 jetracer와 다른 모델들이 지면(ground_plane) 아래에 스폰되므로 Z 좌표에 1을 더합니다.
                 '-z',robot_z_coord,
-                # for robot position on the x,y plane
+                # x,y 평면상의 로봇 위치를 위해
                 '-x',robot_x_coord,
                 '-y',robot_y_coord,
-                # additional arguments can be provided later on to fit out needs
+                # 필요에 따라 추가 인자를 나중에 제공할 수 있음
                 # ...
         ]
     )
 
     # (4.3) ros_gz_bridge
-    # NOTE:  while the "bridge" provides a way to communicate ROS topics to Gazebo topics and vice versa
-    # it still requires manual configuration but this can be done through a YAML file which can be created later
-    # to suit our needs.
+    # 참고: "브리지"가 ROS 토픽과 Gazebo 토픽을 서로 통신하게 해주는 방법을 제공하지만,
+    # 여전히 수동 설정이 필요합니다. 이는 나중에 필요에 맞춰 생성할 수 있는 
+    # YAML 파일을 통해 수행할 수 있습니다.
 
     ros_gz_bridge_node = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
         namespace=robot_namespace,
         arguments=[
-            # manual configuration
-            # manual configuration
-            # <topic>@<ROS2_msg_type>@<Gazebo_msg_type>
-            # the ROS message type is followed by:
-            # -> "@" is a bidirectional bridge.
-            # -> "[" is a bridge from Gazebo to ROS.
-            # -> "]" is a bridge from ROS to Gazebo.
-            # more ROS2 and Gazebo topics can be found at: https://docs.ros.org/en/jazzy/p/ros_gz_bridge/
+            # 수동 설정
+            # 수동 설정
+            # <토픽>@<ROS2_메시지_타입>@<Gazebo_메시지_타입>
+            # ROS 메시지 타입 뒤에 오는 것들:
+            # -> "@" 는 양방향 브리지입니다.
+            # -> "[" 는 Gazebo에서 ROS로의 브리지입니다.
+            # -> "]" 는 ROS에서 Gazebo로의 브리지입니다.
+            # 더 많은 ROS2 및 Gazebo 토픽은 다음에서 찾을 수 있습니다: https://docs.ros.org/en/jazzy/p/ros_gz_bridge/
             
             
-            # the bridge itself can be configured later on using the command:
+            # 브리지 자체는 나중에 다음 명령어를 사용하여 설정할 수 있습니다:
             # ros2 run ros_gz_bridge parameter_bridge
 
-            # or use a yaml file as configuration
-            # more on this can be found at : https://github.com/gazebosim/ros_gz/blob/ros2/ros_gz_bridge/README.md
-            # you can also run : ros2 run ros_gz_bridge parameter_bridge --help
+            # 또는 설정으로 yaml 파일을 사용할 수 있습니다.
+            # 이에 대한 자세한 내용은 다음에서 찾을 수 있습니다: https://github.com/gazebosim/ros_gz/blob/ros2/ros_gz_bridge/README.md
+            # 또한 다음을 실행할 수 있습니다: ros2 run ros_gz_bridge parameter_bridge --help
 
-            # in order to configure the bridge for our purpose correctly
-            # we need to pass a few arguments that can be found here: https://github.com/gazebosim/ros_gz/blob/ros2/ros_gz_bridge/README.md#example-6-using-ros-namespace-with-the-bridge
+            # 우리의 목적에 맞게 브리지를 올바르게 설정하기 위해
+            # 다음 링크에서 찾을 수 있는 몇 가지 인자를 전달해야 합니다: https://github.com/gazebosim/ros_gz/blob/ros2/ros_gz_bridge/README.md#example-6-using-ros-namespace-with-the-bridge
             '--ros-args',
             '-p',PythonExpression(["'",'config_file:=',robot_gz_bridge_path,"'"]),
             # '-p','expand_gz_topic_names:=true',
-            # using namespaces is a way of isolating the same topics (e.g.: /robot_description) for different robots
-            # by creating a topic on which other topics are located (e.g.: /jetank -> /jetank/tf and /jetank/robot_description)
-            # problem is that by default the bridge will NOT apply ROS namespaces on Gazebo topics but will cause a problem.
-            # because a /tf broadcasted by gazebo will not be able to know for which robot it is.
-            # that is why  we enable the parameter "expand_gz_topic_names"
+            # 네임스페이스 사용은 서로 다른 로봇에 대해 동일한 토픽(예: /robot_description)을 격리하는 방법입니다.
+            # 다른 토픽들이 위치할 토픽을 생성함으로써 가능합니다 (예: /jetank -> /jetank/tf 및 /jetank/robot_description).
+            # 문제는 기본적으로 브리지가 Gazebo 토픽에는 ROS 네임스페이스를 적용하지 않아 문제가 발생할 수 있다는 점입니다.
+            # 왜냐하면 Gazebo가 브로드캐스트한 /tf는 어떤 로봇을 위한 것인지 알 수 없기 때문입니다.
+            # 이것이 우리가 "expand_gz_topic_names" 파라미터를 활성화하는 이유입니다.
         ],
         remappings=[
             ('/tf','tf'),
@@ -324,9 +324,9 @@ def generate_launch_description():
         output='screen'
     )
 
-    # while we could have put the "/camera/image_raw" in the parameter bridge,
-    # the image_bridge provides a more effecient bridge for image topics
-    # see migration guide: https://gazebosim.org/docs/latest/migrating_gazebo_classic_ros2_packages/
+    # "/camera/image_raw"를 파라미터 브리지에 넣을 수도 있었지만,
+    # image_bridge가 이미지 토픽에 대해 더 효율적인 브리지를 제공합니다.
+    # 마이그레이션 가이드 참조: https://gazebosim.org/docs/latest/migrating_gazebo_classic_ros2_packages/
     ros_gz_image_bridge_node = Node(
         package='ros_gz_image',
         executable='image_bridge',
@@ -336,12 +336,12 @@ def generate_launch_description():
     )
 
     # (4.4) robot_state_publisher && robot_controllers
-    # we need 2 things:
-    # 1) the robot's package launch file that start the robot_state_publisher node
-    # located inside the launch directory and with a name (by convention) "${ROBOTNAME}_description.launch.py"
-    # 2) the robot's package launch file that start the controllers nodes
-    # located inside the launch directory and with a name (by convention) "${ROBOTNAME}_controllers.launch.py"
-    # where ${ROBOTNAME} is the name of the robot
+    # 2가지가 필요합니다:
+    # 1) robot_state_publisher 노드를 시작하는 로봇 패키지의 런치 파일
+    # launch 디렉토리 안에 위치하며 이름은 (관례에 따라) "${ROBOTNAME}_description.launch.py"입니다.
+    # 2) 컨트롤러 노드를 시작하는 로봇 패키지의 런치 파일
+    # launch 디렉토리 안에 위치하며 이름은 (관례에 따라) "${ROBOTNAME}_controllers.launch.py"입니다.
+    # 여기서 ${ROBOTNAME}은 로봇의 이름입니다.
 
     # 1)
     robot_launch_desc = IncludeLaunchDescription(
@@ -362,9 +362,9 @@ def generate_launch_description():
     )
 
 
-    # (5) set the new environment variables
-    # more on how and why to load these can be found here: https://gazebosim.org/api/sim/8/resources.html
-    # if we add a robot then we append the meshes to the env variable same goes for world meshes
+    # (5) 새로운 환경 변수 설정
+    # 이것들을 로드하는 방법과 이유는 여기서 찾을 수 있습니다: https://gazebosim.org/api/sim/8/resources.html
+    # 로봇을 추가할 경우 해당 메시(meshes)를 환경 변수에 추가합니다. 월드 메시의 경우도 마찬가지입니다.
     # env_var_resource_robots=AppendEnvironmentVariable(
     #     'GZ_SIM_RESOURCE_PATH',
     #     PathJoinSubstitution([
@@ -373,7 +373,7 @@ def generate_launch_description():
     #     ]),
     # )
 
-	# we add the the path to the mesh directory wich contains the meshes used by the world sdf file
+    # 월드 sdf 파일에서 사용되는 메시가 포함된 메시 디렉토리의 경로를 추가합니다.
     env_var_resource_worlds=SetEnvironmentVariable(
         name='GZ_SIM_RESOURCE_PATH',
         value=os.path.join(
@@ -382,17 +382,17 @@ def generate_launch_description():
         ),
     )
 
-    # noticed that when only launching the server this might be required due to the 
-    # launch script 'gz_server.launch.py' NOT setting this. while the launch script 'gz_sim.launch.py' does
+    # 서버만 실행할 때 'gz_server.launch.py' 런치 스크립트가 이 설정을 하지 않기 때문에
+    # 이것이 필요할 수 있음을 확인했습니다. 반면 'gz_sim.launch.py' 런치 스크립트는 이 설정을 합니다.
     env_var_plugin=SetEnvironmentVariable(
         name='GZ_SIM_SYSTEM_PLUGIN_PATH',
         value='/opt/ros/humble/lib/',
     )
     
-    # (6) set some event handlers to start everything in a more lineair 
-    # fashion and have some control in the sequence how nodes are started 
-    # once the robot has spawn inside Gazebo only then we call the launch description
-    # of the robot's controllers
+    # (6) 모든 것을 좀 더 선형적인 방식으로 시작하고 
+    # 노드 시작 순서를 제어하기 위해 몇 가지 이벤트 핸들러를 설정합니다.
+    # 로봇이 Gazebo 내부에 스폰된 후에만 로봇 컨트롤러의 
+    # 런치 디스크립션을 호출합니다.
     launch_desc_after_entity_is_spawn = RegisterEventHandler(
         event_handler=OnProcessExit(
             target_action=spawn_entity_node,
@@ -400,13 +400,13 @@ def generate_launch_description():
         )
     )
 
-    # (7) finally return the launch description
+    # (7) 마지막으로 런치 디스크립션을 반환합니다.
     return LaunchDescription([
-        # all the env variables
+        # 모든 환경 변수들
         env_var_resource_worlds,
         env_var_plugin,
         # env_var_resource_robots,
-        # all the declared arguments are returned for if this launch file's arguments are not provided
+        # 이 런치 파일의 인자가 제공되지 않았을 경우를 위해 선언된 모든 인자 반환
         robot_name_arg,
         world_name_arg,
         gz_server_only_arg,
@@ -415,15 +415,36 @@ def generate_launch_description():
         robot_x_coord_arg,
         robot_y_coord_arg,
         robot_z_coord_arg,
-        # all the required Nodes + launch descriptions
+        # 필요한 모든 노드 + 런치 디스크립션들
         robot_launch_desc,
         ros_gz_launch_desc,
         ros_gz_bridge_node,
         ros_gz_image_bridge_node,
         spawn_entity_node,
-        # all events
+        # 모든 이벤트들
         launch_desc_after_entity_is_spawn,
-        # debug info
+        Node(
+            package='rqt_joint_trajectory_controller',
+            executable='rqt_joint_trajectory_controller',
+            name='rqt_joint_trajectory_controller',
+            namespace='/robot',  # 이 부분이 '--ros-args -r __ns:=/robot' 역할을 합니다.
+            output='screen'
+        ),
+        Node(
+            package='rqt_joint_trajectory_controller',
+            executable='rqt_joint_trajectory_controller',
+            name='rqt_joint_trajectory_controller2',
+            namespace='/robot',  # 이 부분이 '--ros-args -r __ns:=/robot' 역할을 합니다.
+            output='screen'
+        ),
+        Node(
+            package='rqt_robot_steering',
+            executable='rqt_robot_steering',
+            name='rqt_robot_steering',
+            namespace='/robot',  # 이 부분이 '--ros-args -r __ns:=/robot' 역할을 합니다.
+            output='screen'
+        ),
+        # 디버그 정보
         LogInfo(msg=gz_launch_file),
         LogInfo(msg=world_arg_name),
         LogInfo(msg=world_arg)
