@@ -289,7 +289,7 @@ PointCloudQualityMetrics analyze_pointcloud_quality(const pcl::PointCloud<pcl::P
 // VISUALIZATION UTILITIES
 // =============================================================================
 
-cv::Mat create_disparity_colored(const cv::Mat& disparity, double min_disp, double max_disp) {
+cv::Mat create_disparity_colored(const cv::Mat& disparity, [[maybe_unused]] double min_disp, [[maybe_unused]] double max_disp) {
     if (disparity.empty()) {
         return cv::Mat();
     }

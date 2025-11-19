@@ -144,9 +144,10 @@ public:
         // Initialize components
         initialize_parameters();
         // In constructor, right after initialize_parameters():
-        RCLCPP_INFO(get_logger(), "Debug: camera.left_sensor_id = %d, camera.flip_images_180 = %s", 
+        RCLCPP_INFO(get_logger(), "Debug: camera.left_sensor_id = %ld, camera.flip_images_180 = %s", 
                 get_parameter("camera.left_sensor_id").as_int(),
                 get_parameter("camera.flip_images_180").as_bool() ? "true" : "false");
+
         create_cameras();
         create_stereo_processor();
         create_calibration();
@@ -429,8 +430,16 @@ private:
         left_camera_ = CameraFactory::create_camera(CameraFactory::CameraType::JETSON_CSI);
         camera_config_.sensor_id = get_parameter("camera.left_sensor_id").as_int();
         
-        RCLCPP_INFO(get_logger(), "Created left camera id:%d with resolution %dx%d at %d fps, image format: %s, flipped: %d",
-                camera_config_.sensor_id, camera_config_.width, camera_config_.height, camera_config_.fps, camera_config_.format, camera_config_.flip_180);
+        RCLCPP_INFO(get_logger(),
+            "Created left camera id:%d with resolution %dx%d at %d fps, image format: %s, flipped: %d",
+            camera_config_.sensor_id,
+            camera_config_.width,
+            camera_config_.height,
+            camera_config_.fps,
+            camera_config_.format.c_str(),
+            camera_config_.flip_180);
+
+
         
         if (!left_camera_->initialize(camera_config_)) {
             throw std::runtime_error("Failed to initialize left camera");
@@ -439,8 +448,18 @@ private:
         // Create right camera
         right_camera_ = CameraFactory::create_camera(CameraFactory::CameraType::JETSON_CSI);
         camera_config_.sensor_id = get_parameter("camera.right_sensor_id").as_int();
-        RCLCPP_INFO(get_logger(), "Created right camera id:%d with resolution %dx%d at %d fps, image format: %s, flipped: %d",
-                camera_config_.sensor_id, camera_config_.width, camera_config_.height, camera_config_.fps, camera_config_.format, camera_config_.flip_180);
+        
+        RCLCPP_INFO(get_logger(),
+            "Created right camera id:%d with resolution %dx%d at %d fps, image format: %s, flipped: %d",
+            camera_config_.sensor_id,
+            camera_config_.width,
+            camera_config_.height,
+            camera_config_.fps,
+            camera_config_.format.c_str(),
+            camera_config_.flip_180);
+
+
+        
         if (!right_camera_->initialize(camera_config_)) {
             throw std::runtime_error("Failed to initialize right camera");
         }

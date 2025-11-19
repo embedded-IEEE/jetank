@@ -98,7 +98,7 @@ public:
     GPUStereoStrategy() = default;
     ~GPUStereoStrategy() = default;
 
-    bool initialize(const StereoConfig& config, const cv::Size& image_size) override {
+    bool initialize(const StereoConfig& config, [[maybe_unused]] const cv::Size& image_size) override {
         try {
             config_ = config;
             
@@ -142,10 +142,11 @@ public:
         }
     }
 
-    cv::Mat compute_disparity(const cv::Mat& left_rectified, const cv::Mat& right_rectified) override {
+    cv::Mat compute_disparity([[maybe_unused]] const cv::Mat& left_rectified, [[maybe_unused]] const cv::Mat& right_rectified) override {
         auto start = std::chrono::high_resolution_clock::now();
         
         try {
+
 #ifdef OPENCV_ENABLE_NONFREE
             // Upload images to GPU
             left_gpu_.upload(left_rectified);
@@ -272,7 +273,7 @@ public:
     CPUStereoStrategy() = default;
     ~CPUStereoStrategy() = default;
 
-    bool initialize(const StereoConfig& config, const cv::Size& image_size) override {
+    bool initialize(const StereoConfig& config, [[maybe_unused]] const cv::Size& image_size) override {
         try {
             (void)image_size; // Suppress unused parameter warning
             config_ = config;

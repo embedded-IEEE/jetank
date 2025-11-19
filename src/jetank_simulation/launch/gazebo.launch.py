@@ -7,7 +7,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-
+from launch.substitutions import Command
 
 def generate_launch_description():
     # Get package directories
@@ -75,6 +75,10 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': use_sim_time,
             'robot_description': open(urdf_file, 'r').read()
+            #'robot_description': Command([
+            #    'xacro',
+            #    urdf_file
+            #])
         }]
     )
 

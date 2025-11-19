@@ -30,15 +30,15 @@ def generate_launch_description():
     )
 
     # Motor controller launch
-    motor_controller_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('jetank_ros2_main'),
-                'launch',
-                'motor_controller.launch.py'
-            ])
-        ])
-    )
+    # motor_controller_launch = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource([
+    #         PathJoinSubstitution([
+    #             FindPackageShare('jetank_ros2_main'),
+    #             'launch',
+    #             'motor_controller.launch.py'
+    #         ])
+    #     ])
+    # )
 
     # Stereo camera launch
     stereo_camera_launch = IncludeLaunchDescription(
@@ -54,6 +54,6 @@ def generate_launch_description():
     return LaunchDescription([
         use_sim_time_arg,
         urdf_launch,
-        motor_controller_launch,
+        #motor_controller_launch,
         stereo_camera_launch,
     ])
