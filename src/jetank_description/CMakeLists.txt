@@ -11,25 +11,28 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-# Install URDF files
-install(DIRECTORY urdf/
-  DESTINATION share/${PROJECT_NAME}/urdf
+install(
+    DIRECTORY launch
+    DESTINATION share/${PROJECT_NAME}
 )
 
-# Install mesh files
-# install(DIRECTORY meshes/
-#   DESTINATION share/${PROJECT_NAME}/meshes
-# )
 
-# Install launch files
-# install(DIRECTORY launch/
-#  DESTINATION share/${PROJECT_NAME}/launch
-# )
+install(
+    DIRECTORY urdf
+    DESTINATION share/${PROJECT_NAME}
+)
 
-# Install config files
-# install(DIRECTORY config/
-#   DESTINATION share/${PROJECT_NAME}/config
-# )
+
+install(
+    DIRECTORY meshes 
+    DESTINATION share/${PROJECT_NAME}
+)
+
+install(
+    DIRECTORY config
+    DESTINATION share/${PROJECT_NAME}
+)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
