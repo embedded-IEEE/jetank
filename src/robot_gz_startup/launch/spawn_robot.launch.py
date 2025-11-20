@@ -423,27 +423,8 @@ def generate_launch_description():
         spawn_entity_node,
         # 모든 이벤트들
         launch_desc_after_entity_is_spawn,
-        Node(
-            package='rqt_joint_trajectory_controller',
-            executable='rqt_joint_trajectory_controller',
-            name='rqt_joint_trajectory_controller',
-            namespace='/robot',  # 이 부분이 '--ros-args -r __ns:=/robot' 역할을 합니다.
-            output='screen'
-        ),
-        Node(
-            package='rqt_joint_trajectory_controller',
-            executable='rqt_joint_trajectory_controller',
-            name='rqt_joint_trajectory_controller2',
-            namespace='/robot',  # 이 부분이 '--ros-args -r __ns:=/robot' 역할을 합니다.
-            output='screen'
-        ),
-        Node(
-            package='rqt_robot_steering',
-            executable='rqt_robot_steering',
-            name='rqt_robot_steering',
-            namespace='/robot',  # 이 부분이 '--ros-args -r __ns:=/robot' 역할을 합니다.
-            output='screen'
-        ),
+        
+        
         # 디버그 정보
         LogInfo(msg=gz_launch_file),
         LogInfo(msg=world_arg_name),
