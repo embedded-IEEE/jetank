@@ -142,35 +142,43 @@ public:
         }
     }
 
-    cv::Mat compute_disparity([[maybe_unused]] const cv::Mat& left_rectified, [[maybe_unused]] const cv::Mat& right_rectified) override {
-        auto start = std::chrono::high_resolution_clock::now();
-        
-        try {
+    cv::Mat compute_disparity(const cv::Mat& left_rectified, const cv::Mat& right_rectified) override {
 
-#ifdef OPENCV_ENABLE_NONFREE
+        (void)left_rectified;
+        (void)right_rectified;
+
+        const auto start = std::chrono::high_resolution_clock::now();
+
+        #ifndef OPENCV_ENABLE_NONFREE
+            (void)start;
+        #endif
+
+        try {
+    #ifdef OPENCV_ENABLE_NONFREE
             // Upload images to GPU
             left_gpu_.upload(left_rectified);
             right_gpu_.upload(right_rectified);
-            
+
             // Compute disparity on GPU
             stereo_matcher_->compute(left_gpu_, right_gpu_, disparity_gpu_, stream_);
-            
+
             // Download result from GPU
             cv::Mat disparity;
             disparity_gpu_.download(disparity);
-            
+
             // Wait for GPU operations to complete
             stream_.waitForCompletion();
-            
-            auto end = std::chrono::high_resolution_clock::now();
-            last_processing_time_ = std::chrono::duration<double, std::milli>(end - start).count();
-            
+
+            const auto end = std::chrono::high_resolution_clock::now();
+            last_processing_time_ =
+                std::chrono::duration<double, std::milli>(end - start).count();
+
             return disparity;
-#else
+    #else
             std::cerr << "GPU processing not available" << std::endl;
             return cv::Mat();
-#endif
-            
+    #endif
+
         } catch (const cv::Exception& e) {
             std::cerr << "OpenCV error in compute_disparity: " << e.what() << std::endl;
             return cv::Mat();
@@ -392,6 +400,8 @@ public:
     ~SGBMStereoStrategy() = default;
 
     bool initialize(const StereoConfig& config, const cv::Size& image_size) override {
+        (void)image_size;
+
         try {
             config_ = config;
             
