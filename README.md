@@ -1,3 +1,15 @@
+### Acknowledgements
+I would like to express my sincere appreciation to the open-source community and the developers whose work made this project possible.  
+Their contributions, documentation, and shared models greatly supported the development and integration of this project.
+
+Referenced repositories and resources:
+- https://github.com/kvgork/jetank_ROS  
+- https://github.com/decipher2k/Waveshare-Jetank-ROS2
+- https://github.com/ai-practice-enterprice/jetank  
+- https://github.com/ai-practice-enterprice/robot_gz_startup
+
+<br><br>
+
 ### 0. 환경세팅
 ```
 여기에 준호 오빠 패키지 파일 병합함
