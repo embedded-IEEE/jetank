@@ -27,7 +27,8 @@ sudo apt install ros-humble-ign-ros2-control ros-humble-ign-ros2-control-demos -
 ```
 ```
 cd
-git clone https://github.com/Jinsun-Lee/jetank_ws.git
+cd ~/jetank_ws/src
+git clone https://github.com/embedded-IEEE/jetank.git
 ```
 
 <br><br>
